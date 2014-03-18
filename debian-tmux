@@ -87,7 +87,7 @@ start_server(){
 }
 
 stop_server(){
-	echo -n "Stopping ${SRV_NAME}" ## do i really need to explain this?
+	echo -n "Stopping ${SRV_NAME}: " ## do i really need to explain this?
 	if check_running ## see if we can actually stop it
 	then
 		send_command "say Oh lordy, it's a shutdown!" ## warn everyone
@@ -112,7 +112,7 @@ stop_server(){
 
 backup_world(){
 	echo -n "Backing up World: "
-	if [ -z "$BACKUP_DIR"] ## see if there is a backup dir set
+	if [ -z "$BACKUP_DIR" ] ## see if there is a backup dir set
 	then
 		if [ -d $BACKUP_DIR ]
 		then
