@@ -113,6 +113,7 @@ stop_server(){
 backup_world(){
 	echo -n "Backing up World: "
 	if [ -z "$BACKUP_DIR"] ## see if there is a backup dir set
+	then
 		if [ -d $BACKUP_DIR ]
 		then
 			disable_save ## turn of saving, otherwise chaos will ensue
