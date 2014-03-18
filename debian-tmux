@@ -27,7 +27,7 @@ CPUS=2 ## number of cores for java to use
 MAX_RAM='4096M' ## maximum memory allowed for java
 RES_RAM='512M' ## starting ram for java
 JAVA_OPTS="-Xmx${MAX_RAM} -Xms${RES_RAM} -XX:+UseConcMarkSweepGC -XX:+CMSIncrementalPacing -XX:ParallelGCThreads=${CPUS}" ##all options for java 
-AS_USER="$(which sudo) -u ${USER}"
+AS_USER="$(which sudo) -u ${USER}" ## save this for later, we're gonna be using it a lot
 
 
 ## Functions
@@ -42,7 +42,7 @@ check_running(){
 }
 
 send_command(){
-	$AS_USER $(which tmux) send -t $SRV_NAME $1 ENTER ## run tmux as minecraft user, and send command followed by newline
+	$AS_USER $(which tmux) send -t $SRV_NAME "$1" ENTER ## run tmux as minecraft user, and send command followed by newline
 }
 
 attach_console(){
@@ -130,13 +130,13 @@ backup_world(){
 
 case "$1" in
 	start)
-		start_server ;;
+		start_server ;; ## start the server, if arg1 was start
 	stop)
-		stop_server ;;
+		stop_server ;; ## come on, this is obvious
 	restart)
 		stop_server
 		sleep 1
-		start_server ;;
+		start_server ;;  ## do you really need help with this?
 	backup)
 		backup_world ;;
 	console)
