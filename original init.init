@@ -1,0 +1,186 @@
+#!/bin/bash
+# /etc/init.d/minecraft
+# version 0.1.0 2012-02-25 (YYYY-MM-DD)
+
+
+### BEGIN INIT INFO
+# Provides:   minecraft
+# Required-Start: $local_fs $remote_fs
+# Required-Stop:  $local_fs $remote_fs
+# Should-Start:   $network
+# Should-Stop:    $network
+# Default-Start:  2 3 4 5
+# Default-Stop:   0 1 6
+# Short-Description:    Minecraft server
+# Description:    Starts the minecraft server
+### END INIT INFO
+
+
+# Control Variables
+
+http://ci.md-5.net/view/Spigot/job/Spigot/lastSuccessfulBuild/artifact/Spigot-Server/target/spigot.jar
+
+MINECRAFT_JAR='spigot.jar'
+MINECRAFT_OPTS='nogui'
+SERVICENAME='minecraft-srv'
+USERNAME='minecraft'
+WORLD='world'
+MINECRAFT_PATH='/srv/minecraft'
+BACKUP_FOLDER='/srv/backup/minecraft'
+CPU_COUNT=2
+MEMORY_ALLOC='4096M'
+MEMORY_RES='4096M'
+JAVA_OPTS="-Xmx${MEMORY_ALLOC} -Xms${MEMORY_RES} -XX:+UseConcMarkSweepGC -XX:+CMSIncrementalPacing -XX:ParallelGCThreads=${CPU_COUNT}"
+USER_DO="/usr/bin/sudo -u ${USERNAME}"
+SVR_CMD="${USER_DO} /usr/bin/screen -p 0 -S $SERVICENAME -X eval"
+
+
+# Check if Server is running
+
+
+server_is_running() {
+  if pgrep -u $USERNAME -f $MINECRAFT_JAR > /dev/null
+  then
+    return 0 # true
+  else
+    return 1 # false
+  fi
+}
+
+
+# Start Server
+
+
+start_server() {
+  echo -n "Starting Minecraft server: "
+  if server_is_running
+  then
+    echo "Failed - Server is already running!"
+  else
+    cd $MINECRAFT_PATH
+    $USER_DO /usr/bin/screen -dmS $SERVICENAME java ${JAVA_OPTS} -jar bin/$MINECRAFT_JAR $MINECRAFT_OPTS
+    sleep 2
+    if server_is_running
+    then
+      echo "Success"
+    else
+      echo "Failed - Unable to start server"
+    fi
+  fi 
+}
+
+
+# Stop Server
+
+
+stop_server() {
+  echo -n "Stoping Minecraft server: "
+  if server_is_running
+  then
+    
+    $SVR_CMD 'stuff say\040ATTENTION:\040Starting\040server\040shutdown\015'
+    
+    disable_saving > /dev/null
+    sleep 5
+    
+    $SVR_CMD 'stuff stop\015'
+    sleep 2
+    
+    if server_is_running
+    then
+      echo "Failed - Unable to stop server"
+    else
+      echo "Success"
+    fi
+  else
+    echo "Failed - Server is not running"
+  fi
+}
+
+
+# Backup Server
+
+
+backup_server() {
+  echo -n "Backing up Minecraft data: "
+  
+  disable_saving
+
+
+  # Do backup
+  $USER_DO /usr/bin/rsync --archive --quiet $MINECRAFT_PATH $BACKUP_FOLDER
+
+
+  enable_saving 
+  
+  echo "Success"
+}  
+  
+# Download Update
+
+
+# Disable Saving
+
+
+disable_saving() {
+  if server_is_running
+  then
+    $SVR_CMD 'stuff say\040ATTENTION:\040Suspending\040write\040opperations\015'
+    $SVR_CMD 'stuff save-off\015'
+    $SVR_CMD 'stuff save-all\015'
+    sync
+    sleep 5
+  fi
+}
+
+
+# Enable Saving
+
+
+enable_saving() {
+  if server_is_running
+  then
+    $SVR_CMD 'stuff save-on\015'
+    $SVR_CMD 'stuff say\040ATTENTION:\040Resuming\040write\040opperations\015'
+  fi
+}
+
+
+
+
+#Start-Stop here
+
+
+case "$1" in
+  start)
+    start_server
+    ;;
+  stop)
+    stop_server
+    ;;
+  restart)
+    stop_server
+    sleep 1
+    start_server
+    ;;
+backup)
+    backup_server
+    ;;
+  status)
+    if pgrep -u $USERNAME -f $SERVICE > /dev/null
+    then
+      echo "Minecraft is running"
+    else
+      echo "Minecraft is not running"
+    fi
+    ;;
+
+
+  *)
+  echo "Usage: /etc/init.d/minecraft {start|stop|backup|status|restart}"
+  exit 1
+  ;;
+esac
+
+
+exit 0

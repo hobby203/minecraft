@@ -1,0 +1,155 @@
+#!/bin/bash
+# /etc/init.d/minecraft
+# version 0.0.1 2014-03-18 (YYY-MM-DD)
+
+### BEGIN INIT INFO
+# Provides:   minecraft
+# Required-Start: $local_fs $remote_fs
+# Required-Stop:  $local_fs $remote_fs
+# Should-Start:   $network
+# Should-Stop:    $network
+# Default-Start:  2 3 4 5
+# Default-Stop:   0 1 6
+# Short-Description:    Minecraft Server
+# Description:    Starts the minecraft server
+### END INIT INFO
+
+# Variables
+
+SRV_PATH='/srv/minecraft' ## location of minecraft service folder
+JAR_FILE='bin/spigot.jar' ## location of minecraft jar, in relation to SRV_PATH
+JAR_OPTS='nogui' ## custom operators for java
+SRV_NAME='spigot' ## name for service, used for tmux session
+USER='minecraft' ## user to run service as
+WORLD='world' ## name of minecraft world
+BACKUP_DIR='/srv/backup' ## location of backup dir, leave blank to disable
+CPUS=2 ## number of cores for java to use
+MAX_RAM='4096M' ## maximum memory allowed for java
+RES_RAM='512M' ## starting ram for java
+JAVA_OPTS="-Xmx${MAX_RAM} -Xms${RES_RAM} -XX:+UseConcMarkSweepGC -XX:+CMSIncrementalPacing -XX:ParallelGCThreads=${CPUS}" ##all options for java 
+AS_USER="$(which sudo) -u ${USER}"
+
+
+## Functions
+
+check_running(){
+	if $(which pgrep) -u $USER -f $JAR_FILE > /dev/null ## check if process exists for jar file
+	then
+		return 0 ## when process is found
+	else
+		return 1 ## when process is not found, ie server not running
+	fi
+}
+
+send_command(){
+	$AS_USER $(which tmux) send -t $SRV_NAME $1 ENTER ## run tmux as minecraft user, and send command followed by newline
+}
+
+attach_console(){
+	$AS_USER $(which tmux) attach -t $SRV_NAME ## attach to tmux session
+}
+
+disable_save(){
+	if check_running ## make sure the server is running
+	then
+		send_command "say Prepare your anuses, time for a backup!"
+		send_command "save-off"  ## turn off auto saving, otherwise this is gonna break
+		send_command "save-all"  ## force save current state
+		sync ## flush fs buffer, because reasons
+		sleep 2 ## wait a bit, give stuff time to catch up
+	fi
+}
+
+enable_save(){
+	if check_running ## make sure server is running first
+	then
+		send_command "save-on" ## turn auto saving back on
+		send_command "say And relax, backup complete!"
+	fi
+}
+
+start_server(){
+	echo -n "Starting ${SRV_NAME}: " ## self explanatory
+	if check_running ## is it already running?
+	then
+		echo "Failed, ${SRV_NAME} already running" ## it was already running.
+	else
+		cd $SRV_PATH ## get to where minecraft is 
+		$AS_USER $(which tmux) new -s $(SRV_NAME) $(which java) ${JAVA_OPTS} -jar ${JAR_FILE} ${JAR_OPTS} ## apparently, this runs the jar, looks like a mess to me...
+		sleep 5 ## give the server a chance to start, might wanna up this with lots of plugins
+		if check_running ## did it work?
+		then
+			echo "Success" ## yay, it worked!
+		else
+			echo "Failed, check the logs!" ## uh-oh, something went wrong, not our fault!
+		fi
+	fi
+}
+
+stop_server(){
+	echo -n "Stopping ${SRV_NAME}" ## do i really need to explain this?
+	if check_running ## see if we can actually stop it
+	then
+		send_command "say Oh lordy, it's a shutdown!" ## warn everyone
+		send_command "save-all" ## quickly force a save
+		
+		sleep 5 ## let minecraft catch up
+
+		send_command "stop" ## stop the server
+
+		sleep 5 ## minecraft is slow, wait for it to shut down
+
+		if check_running ## did we actually stop it?
+		then
+			echo "Failed, try killing the process yourself?" ## Well, this is bad...
+		else
+			echo "Success" ## Huzzah, we managed to stop it, aren't you proud?
+		fi
+	else
+		echo "Failed, ${SRV_NAME} not running" ## how can you make a phone call, if you cannot speak?
+	fi
+}
+
+backup_world(){
+	echo -n "Backing up World: "
+	if [ -z "$BACKUP_DIR"] ## see if there is a backup dir set
+		if [ -d $BACKUP_DIR ]
+		then
+			disable_save ## turn of saving, otherwise chaos will ensue
+			$AS_USER $(which rsync) --archive --quiet $BACKUP_DIR ## rsync, without telling the user, sneaky sneaky
+			enable_save ## turn saving back on, we're done now
+			echo "Success"
+		else
+			echo "Failed - Backup directory doesn't exist!"
+		fi
+	else
+		echo "Failed, no backup dir set!" ## this was an option, if you remember
+	fi
+}
+
+case "$1" in
+	start)
+		start_server ;;
+	stop)
+		stop_server ;;
+	restart)
+		stop_server
+		sleep 1
+		start_server ;;
+	backup)
+		backup_world ;;
+	console)
+		attach_console ;;
+	status)
+		if check_running
+		then
+			echo "${SRV_NAME} is running"
+		else
+			echo "${SRV_NAME} is not running"
+		fi ;;
+	*)
+	echo "Usage: /etc/init.d/minecraft {start|stop|restart|backup|console|status}"
+	exit 1 ;;
+esac
+
+exit 0
