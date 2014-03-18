@@ -117,7 +117,7 @@ backup_world(){
 		if [ -d $BACKUP_DIR ]
 		then
 			disable_save ## turn of saving, otherwise chaos will ensue
-			$AS_USER $(which rsync) --archive --quiet ${SRV_PATH}${world} $BACKUP_DIR ## rsync, without telling the user, sneaky sneaky
+			$AS_USER $(which rsync) --archive --quiet ${SRV_PATH}${WORLD} $BACKUP_DIR ## rsync, without telling the user, sneaky sneaky
 			enable_save ## turn saving back on, we're done now
 			echo "Success"
 		else
