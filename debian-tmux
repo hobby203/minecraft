@@ -16,13 +16,13 @@
 
 # Variables
 
-SRV_PATH='/srv/minecraft' ## location of minecraft service folder
+SRV_PATH='/srv/minecraft/' ## location of minecraft service folder, LEAVE THE / ON THE END
 JAR_FILE='bin/spigot.jar' ## location of minecraft jar, in relation to SRV_PATH
 JAR_OPTS='nogui' ## custom operators for java
 SRV_NAME='spigot' ## name for service, used for tmux session
 USER='minecraft' ## user to run service as
-WORLD='world' ## name of minecraft world
-BACKUP_DIR='/srv/backup' ## location of backup dir, leave blank to disable
+WORLD='world/' ## world dir, in relation to SRV_PATH
+BACKUP_DIR='/srv/backup/' ## location of backup dir, leave blank to disable
 CPUS=2 ## number of cores for java to use
 MAX_RAM='4096M' ## maximum memory allowed for java
 RES_RAM='512M' ## starting ram for java
@@ -117,7 +117,7 @@ backup_world(){
 		if [ -d $BACKUP_DIR ]
 		then
 			disable_save ## turn of saving, otherwise chaos will ensue
-			$AS_USER $(which rsync) --archive --quiet $BACKUP_DIR ## rsync, without telling the user, sneaky sneaky
+			$AS_USER $(which rsync) --archive --quiet ${SRV_PATH}${world} $BACKUP_DIR ## rsync, without telling the user, sneaky sneaky
 			enable_save ## turn saving back on, we're done now
 			echo "Success"
 		else
