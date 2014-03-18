@@ -75,7 +75,7 @@ start_server(){
 		echo "Failed, ${SRV_NAME} already running" ## it was already running.
 	else
 		cd $SRV_PATH ## get to where minecraft is 
-		$AS_USER $(which tmux) new -s $(SRV_NAME) $(which java) ${JAVA_OPTS} -jar ${JAR_FILE} ${JAR_OPTS} ## apparently, this runs the jar, looks like a mess to me...
+		$AS_USER $(which tmux) new -s ${SRV_NAME} $(which java) ${JAVA_OPTS} -jar ${JAR_FILE} ${JAR_OPTS} ## apparently, this runs the jar, looks like a mess to me...
 		sleep 5 ## give the server a chance to start, might wanna up this with lots of plugins
 		if check_running ## did it work?
 		then
