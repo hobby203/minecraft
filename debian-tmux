@@ -46,7 +46,12 @@ send_command(){
 }
 
 attach_console(){
-	$AS_USER $(which tmux) attach -t $SRV_NAME ## attach to tmux session
+	if check_running ## see if it's running
+	then
+		$AS_USER $(which tmux) attach -t $SRV_NAME ## attach to tmux session
+	else
+		echo "Connection failed, server is not running"
+	fi
 }
 
 disable_save(){
@@ -91,6 +96,8 @@ stop_server(){
 	if check_running ## see if we can actually stop it
 	then
 		send_command "say Oh lordy, it's a shutdown!" ## warn everyone
+
+		sleep 3 ## let people see the message
 
 		send_command "stop" ## stop the server
 
