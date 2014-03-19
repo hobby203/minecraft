@@ -91,9 +91,6 @@ stop_server(){
 	if check_running ## see if we can actually stop it
 	then
 		send_command "say Oh lordy, it's a shutdown!" ## warn everyone
-		send_command "save-all" ## quickly force a save
-		
-		sleep 5 ## let minecraft catch up
 
 		send_command "stop" ## stop the server
 
