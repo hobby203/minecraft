@@ -17,15 +17,16 @@
 # Variables
 
 SRV_PATH='/srv/minecraft/' ## location of minecraft service folder, LEAVE THE / ON THE END
-JAR_FILE='bin/spigot.jar' ## location of minecraft jar, in relation to SRV_PATH
+JAR_FILE='forge.jar' ## location of minecraft jar, in relation to SRV_PATH
 JAR_OPTS='nogui' ## custom operators for java
-SRV_NAME='spigot' ## name for service, used for tmux session
+SRV_NAME='ftb' ## name for service, used for tmux session
 USER='minecraft' ## user to run service as
 WORLD='world/' ## world dir, in relation to SRV_PATH
-BACKUP_DIR='/srv/backup/' ## location of backup dir, leave blank to disable
+FULL_BACKUP_DIR='/srv/backup/minecraft.full' ## location of backup dir, leave blank to disable, supports rsync over ssh
+DIFF_BACKUP_DIR='/srv/backup/minecraft' ## location of differential backup dir
 CPUS=2 ## number of cores for java to use
-MAX_RAM='4096M' ## maximum memory allowed for java
-RES_RAM='512M' ## starting ram for java
+MAX_RAM='6192M' ## maximum memory allowed for java
+RES_RAM='1024M' ## starting ram for java
 JAVA_OPTS="-Xmx${MAX_RAM} -Xms${RES_RAM} -XX:+UseConcMarkSweepGC -XX:+CMSIncrementalPacing -XX:ParallelGCThreads=${CPUS}" ##all options for java 
 AS_USER="$(which sudo) -u ${USER}" ## save this for later, we're gonna be using it a lot
 
@@ -59,7 +60,7 @@ disable_save(){
 	then
 		send_command "say Prepare your anuses, time for a backup!"
 		send_command "save-off"  ## turn off auto saving, otherwise this is gonna break
-		send_command "save-all"  ## force save current state
+		send_command "save-all"  ## Horse save current state
 		sync ## flush fs buffer, because reasons
 		sleep 2 ## wait a bit, give stuff time to catch up
 	fi
@@ -79,8 +80,10 @@ start_server(){
 	then
 		echo "Failed, ${SRV_NAME} already running" ## it was already running.
 	else
-		cd $SRV_PATH ## get to where minecraft is 
+		cd $SRV_PATH ## get to where minecraft is
+		echo "i'm in" $SRV_PATH 
 		$AS_USER $(which tmux) new -d -s ${SRV_NAME} "$(which java) ${JAVA_OPTS} -jar ${JAR_FILE} ${JAR_OPTS}" ## apparently, this runs the jar, looks like a mess to me...
+		echo "got here now"
 		sleep 5 ## give the server a chance to start, might wanna up this with lots of plugins
 		if check_running ## did it work?
 		then
@@ -132,6 +135,24 @@ backup_world(){
 	fi
 }
 
+diff_backup_world(){
+	echo -n "Performing differential backup: "
+	if [! -z $DIFF_BACKUP_DIR ]
+	then
+		if [ -d $DIFF_BACKUP_DIR ]
+		then
+			disable_save
+			$AS_USER $(which rdiff-backup) ${SRV_PATH}${WORLD} $DIFF_BACKUP_DIR
+			enable_save
+			echo "Success"
+		else
+			echo "Failed - Differential backup dir does not exist!"
+		fi
+	else
+		echo "Failed, no differential backup dir set!"
+	fi
+}
+
 case "$1" in
 	start)
 		start_server ;; ## start the server, if arg1 was start
@@ -143,6 +164,8 @@ case "$1" in
 		start_server ;;  ## do you really need help with this?
 	backup)
 		backup_world ;;
+	diff_backup)
+		diff_backup_world ;;
 	console)
 		attach_console ;;
 	status)
@@ -153,7 +176,7 @@ case "$1" in
 			echo "${SRV_NAME} is not running"
 		fi ;;
 	*)
-	echo "Usage: /etc/init.d/minecraft {start|stop|restart|backup|console|status}"
+	echo "Usage: /etc/init.d/minecraft {start|stop|restart|backup|diff_backup|console|status}"
 	exit 1 ;;
 esac
 
