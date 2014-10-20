@@ -137,7 +137,7 @@ backup_world(){
 
 diff_backup_world(){
 	echo -n "Performing differential backup: "
-	if [! -z $DIFF_BACKUP_DIR ]
+	if [ ! -z $DIFF_BACKUP_DIR ]
 	then
 		if [ -d $DIFF_BACKUP_DIR ]
 		then
